@@ -26,14 +26,10 @@ public class hitopject : MonoBehaviour
     
     // returns true if the car is left of object, false if right
     private bool isleft(Vector3 position){
-		float carrotation = car.rotation.y;
-		if (carrotation< 0){
-			carrotation = carrotation+360;
-		}
-		Vector3 diff = position-car.position;
-		Debug.Log("Rotation: "+carrotation.ToString());
-		Debug.Log("diff Vektor: x"+ diff.x.ToString()+" z: " +diff.y.ToString());
-		if((carrotation > 315) || (carrotation > 0 && carrotation < 45) ){
+		Vector3 Dir = position - car.position;
+		Dir = Quaternion.Inverse(car.rotation) * Dir;
+		return (Dir.x>0);
+		/*if((carrotation > 315) || (carrotation > 0 && carrotation < 45) ){
 			return (diff.x > 0);
 		}else if (carrotation > 45 && carrotation < 135 ){
 			return (diff.z > 0);
@@ -42,7 +38,7 @@ public class hitopject : MonoBehaviour
 		}else if (carrotation > 225 && carrotation < 315 ){
 			return (diff.z < 0);
 		}
-		return false;
+		return false;*/
 		
 	}
 
