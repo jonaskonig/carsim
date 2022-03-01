@@ -1,6 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
+using System.Threading;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 public class Manager : MonoBehaviour
 {
@@ -9,12 +14,17 @@ public class Manager : MonoBehaviour
 	public GameObject obsticalred;
 	public int obsticalcount;
 	public int botcount;
+	public int port;
+	public string adress;
+	private int startport;
 	public float maxx;
 	public float minx;
 	public float maxy;
 	public float miny;
 	private List<Bot> bot;
-	private List<Object> blocks;
+	private List<UnityEngine.Object> blocks;
+	private Thread receiveThread; //1
+	private UdpClient client;
     // Start is called before the first frame update
     void Start()
     {
@@ -30,7 +40,7 @@ public class Manager : MonoBehaviour
     }
     
     float[] createxy(){
-		float[] k = {Random.Range(minx, maxx),Random.Range(miny, maxy)};
+		float[] k = {UnityEngine.Random.Range(minx, maxx),UnityEngine.Random.Range(miny, maxy)};
 		Debug.Log("x:"+k[0].ToString()+ " y:"+ k[1].ToString());
 		return k;
 	}
@@ -64,7 +74,7 @@ public class Manager : MonoBehaviour
 	}
     
     void initblock(){
-		blocks = new List<Object>();
+		blocks = new List<UnityEngine.Object>();
 		float[] randoms = getrandom(obsticalcount);
 		for (int i = 0; i < obsticalcount*2; i= i+4){
 			blocks.Add(Instantiate(obsticalblue,new Vector3(randoms[i], 3f, randoms[i+1]),new Quaternion(0, 0, 1, 0)));
@@ -95,4 +105,55 @@ public class Manager : MonoBehaviour
 		}
 		
 	}
+	
+	private void InitUDP(){
+		print ("UDP Initialized");
+		receiveThread = new Thread (new ThreadStart(UDPstuff));
+		receiveThread.IsBackground = true;
+		receiveThread.Start();
+	}
+    
+	
+	private void UDPstuff(){
+		client = new UdpClient (port);
+		byte[] data;
+		while (true){
+			try{
+				IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);
+				data = client.Receive(ref anyIP); 
+				string text = Encoding.UTF8.GetString(data); 
+				client.Send(data, data.Length);
+				break;
+			} 
+			catch(Exception e){
+				print (e.ToString());
+			}
+		}
+		while (true){
+			try{
+					IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);	
+					data = client.Receive(ref anyIP);
+					string text = Encoding.UTF8.GetString(data); 
+					if(text == "Start"){
+						destroybots();
+						initcar();
+						data = Encoding.UTF8.GetBytes("Started");
+						client.Send(data, data.Length);
+					}
+					if(text == "shuffle"){
+						destroyblocks();
+						initblock();
+					    data = Encoding.UTF8.GetBytes("shuffled");
+						client.Send(data, data.Length);
+					}
+				
+				
+			} 
+			catch(Exception e){
+				print (e.ToString()); 
+			}
+		}
+		
+	}
+	
 }

@@ -13,7 +13,7 @@ public class Bot : MonoBehaviour
     public float rotation;//Rotation multiplier
 	public float steerangle;
 	public float acceleration;
-	public Camera camera;
+	//public Camera camera;
 	private long starttime;
 	private double acc;
 	private double steer;
@@ -26,7 +26,7 @@ public class Bot : MonoBehaviour
 	private Thread receiveThread; //1
 	private UdpClient client; //2
 	private bool gamegoson;
-
+	private Camera camera;
     void FixedUpdate()//FixedUpdate is called at a constant interval
     {
 		transform.Rotate(0, steerangle * rotation, 0, Space.World);//controls the cars movement
@@ -37,6 +37,7 @@ public class Bot : MonoBehaviour
     void Start()
     {
 		gamegoson = true;
+		camera = GetComponent<Camera>();
         starttime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
         InitUDP();
     }
@@ -57,6 +58,10 @@ public class Bot : MonoBehaviour
 		adress = aadress;
 		
 	}
+	
+	public double getscore(){
+		return score;
+	}
     
     public long Getduration(){
 		return duration;
@@ -65,7 +70,6 @@ public class Bot : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
 	    if (other.tag == "red" && !(isleft(other.transform.position))){
-			
 		   count++;
 		}else if(other.tag == "blue" && isleft(other.transform.position)){
 			count++;
@@ -123,6 +127,7 @@ public class Bot : MonoBehaviour
 		}
 		while (true){
 			try{
+				
 				if (newpic){
 					IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);
 					client.Send(picture, picture.Length);
@@ -133,7 +138,10 @@ public class Bot : MonoBehaviour
 					newpic = false; 
 				}
 				if (gamegoson){
-					
+					IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);
+					var bytes = System.Text.Encoding.UTF8.GetBytes("ENDOFGAME");
+					client.Send(bytes, bytes.Length);
+					break;
 				}
 				
 			} 
