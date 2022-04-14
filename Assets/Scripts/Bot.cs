@@ -9,10 +9,13 @@ using System.Text;
 public class Bot : MonoBehaviour
 {
 	[SerializeField] public int count;
+	public GameObject prefab;
 	public float speed;//Speed Multiplier
     public float rotation;//Rotation multiplier
 	public float steerangle;
 	public float acceleration;
+	public int resWidth;
+	public int resHeight;
 	//public Camera camera;
 	private long starttime;
 	private double acc;
@@ -24,9 +27,13 @@ public class Bot : MonoBehaviour
 	private byte[] picture;
 	private long duration;
 	private Thread receiveThread; //1
+	private Thread sendThread:
 	private UdpClient client; //2
+	private UdpClient server; 
 	private bool gamegoson;
-	private Camera camera;
+	private bool recvstop;
+	private bool sendstop;
+	public Camera camera;
     void FixedUpdate()//FixedUpdate is called at a constant interval
     {
 		transform.Rotate(0, steerangle * rotation, 0, Space.World);//controls the cars movement
@@ -37,7 +44,7 @@ public class Bot : MonoBehaviour
     void Start()
     {
 		gamegoson = true;
-		camera = GetComponent<Camera>();
+		setupcam();
         starttime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
         InitUDP();
     }
@@ -45,22 +52,31 @@ public class Bot : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-		if (!gamegoson){
-			float dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
-			score = dist/duration;
-		}
 		picture = CamCapture();
 		newpic = true;
         
     }
-    public Bot(int aport, string aadress){
+    public void setportandaddress(int aport, string aadress){
 		port = aport;
 		adress = aadress;
-		
+	}
+	
+	private void setupcam(){
+		GameObject temp  = Instantiate(prefab,transform.position,new Quaternion(0, 0, 0, 0));
+		CameraFollow script = temp.GetComponent<CameraFollow>();
+		script.settransform(transform);
+		camera = temp.GetComponent<Camera>();
 	}
 	
 	public double getscore(){
+		gamegoson = false;
+		float dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
+		score = dist/(starttime- new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds());
 		return score;
+	}
+	
+	public bool getnothread(){
+		return (!recvstop && !sendstop)
 	}
     
     public long Getduration(){
@@ -89,58 +105,97 @@ public class Bot : MonoBehaviour
 	
 	private byte[] CamCapture()
     {
-        RenderTexture currentRT = RenderTexture.active;
-        RenderTexture.active = camera.targetTexture;
+        RenderTexture rt = new RenderTexture(resWidth, resHeight, 24);
+        camera.targetTexture = rt;
+        Texture2D screenShot = new Texture2D(resWidth, resHeight, TextureFormat.RGB24, false);
         camera.Render();
-        Texture2D Image = new Texture2D(camera.targetTexture.width, camera.targetTexture.height);
-        Image.ReadPixels(new Rect(0, 0, camera.targetTexture.width, camera.targetTexture.height), 0, 0);
-        Image.Apply();
-        RenderTexture.active = currentRT;
-        var Bytes = Image.EncodeToPNG();
-        Destroy(Image);
-        return Bytes;
+        RenderTexture.active = rt;
+        screenShot.ReadPixels(new Rect(0, 0, resWidth, resHeight), 0, 0);
+        camera.targetTexture = null;
+        RenderTexture.active = null; // JC: added to avoid errors
+        Destroy(rt);
+        return screenShot.EncodeToPNG();
 		
     }
     
     private void InitUDP(){
 		print ("UDP Initialized");
-		receiveThread = new Thread (new ThreadStart(UDPstuff));
+		receiveThread = new Thread (new ThreadStart(UPDrecv));
 		receiveThread.IsBackground = true;
 		receiveThread.Start();
+		sendThread = new Thread (new ThreadStart(UDPstuff));
+		sendThread.IsBackground = true;
+		sThread.Start();
 	}
-    
 	
-	private void UDPstuff(){
-		client = new UdpClient (port);
+	private void UPDrecv(){
+		server = new UdpClient();
+		IPEndPoint localEp = new IPEndPoint(IPAddress.Parse(adress), port+2);
+		server.Client.Bind(localEp);
 		byte[] data;
 		while (true){
 			try{
-				IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);
-				data = client.Receive(ref anyIP); 
+				if(!gamegoson){
+					recvstop = false;
+					break;
+				}
+				data = server.Receive(ref anyIP); 
 				string text = Encoding.UTF8.GetString(data); 
-				client.Send(data, data.Length);
-				break;
+				if (text == "ENDREG"){
+					recvstop = false;
+					break;
+				}
+
+				acc = Convert.ToDouble(text[0])
+				steer = Convert.ToDouble(text[1])
 			} 
 			catch(Exception e){
 				print (e.ToString());
 			}
 		}
+		
+	}
+    
+    
+    
+    
+	
+	private void UDPstuff(){
+		client = new UdpClient(port);
+		byte[] startcode = System.Text.Encoding.UTF8.GetBytes("LosGehtsKleinerHase");
+		byte[] endcode = System.Text.Encoding.UTF8.GetBytes("ZuEndekleinerHase");
+		print("Port:"+ port.ToString());
+		int port2 = port+1;
+		
+		IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress),port2);
 		while (true){
 			try{
-				
 				if (newpic){
-					IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);
-					client.Send(picture, picture.Length);
-					data = client.Receive(ref anyIP);
-					acc = Convert.ToDouble(Encoding.UTF8.GetString(data));
-					data = client.Receive(ref anyIP);
-					steer = Convert.ToDouble(Encoding.UTF8.GetString(data));
+					int len = picture.Length;
+					print (len.ToString());
+					client.Send(startcode,startcode.Length, anyIP);
+					while (true){
+						if (picture.Length < 8654){
+							client.Send(picture,picture.Length, anyIP);
+							print("sending the rest!");
+							
+							break;
+						}
+						byte[] first = new byte[8654];
+						Buffer.BlockCopy(picture, 0, first, 0, first.Length);
+						byte[] second = new byte[picture.Length - first.Length];
+						Buffer.BlockCopy(picture, first.Length, second, 0, second.Length);
+						client.Send(first,first.Length,anyIP);
+						picture = second;
+						print(picture.Length.ToString());
+					}
+					client.Send(endcode,endcode.Length, anyIP);
 					newpic = false; 
 				}
-				if (gamegoson){
-					IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress), port);
+				if (!gamegoson){
 					var bytes = System.Text.Encoding.UTF8.GetBytes("ENDOFGAME");
 					client.Send(bytes, bytes.Length);
+					sendstop = false;
 					break;
 				}
 				

@@ -16,6 +16,10 @@ public class CameraFollow : MonoBehaviour
         HandleRotation();
     }
    
+	public void settransform(Transform t){
+		target = t;
+	}
+	
     private void HandleTranslation()
     {
         var targetPosition = target.TransformPoint(offset);
