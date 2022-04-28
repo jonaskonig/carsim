@@ -884,7 +884,7 @@ MonoBehaviour:
     type: 3}
   obsticalred: {fileID: 4860177610794674011, guid: 3e11cd3ae44c8436d85c818e43d4b542,
     type: 3}
-  obsticalcount: 20
+  obsticalcount: 10
   botcount: 2
   port: 9653
   adress: 127.0.0.1

@@ -121,6 +121,7 @@ public class Manager : MonoBehaviour
 	}
     
     void getresults(){
+		result = "";
 		for (int i = 0; i < bot.Count; i++){
 			if (i == 0){
 				result += bot[i].getscore().ToString("0.#######");
@@ -154,7 +155,7 @@ public class Manager : MonoBehaviour
     {
 		bot = new List<Bot>();
 		for (int i = 0; i < botcount; i++){
-			Bot b  = Instantiate(prefab,new Vector3(0,0,-20),new Quaternion(0, 0, 0, 0)).GetComponent<Bot>();
+			Bot b  = Instantiate(prefab,new Vector3(0,-1.7f,-26),new Quaternion(0, 0, 0, 0)).GetComponent<Bot>();
 			b.setportandaddress(botport,"127.0.0.1");
 			botport += 4;
 			bot.Add(b);

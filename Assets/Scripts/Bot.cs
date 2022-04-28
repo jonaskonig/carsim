@@ -68,7 +68,7 @@ public class Bot : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-		if (gamegoson){
+		if (gamegoson && camera != null){
 			picture = CamCapture();
 			newpic = true;
 		}
@@ -119,26 +119,26 @@ public class Bot : MonoBehaviour
 	
 	public double getscore(){
 		gamegoson = false;
-		GameObject.Destroy(camera.gameObject);
 		//Destroy(camera);
+		receiveThread.Interrupt();
+		sendThread.Interrupt();
+		sendThread.Join();
+		receiveThread.Join();
 		server.Close();
 		client.Close();
-		receiveThread.Abort();
+		client.Dispose();
+		server.Dispose();
 		recvstop = false;
-		try{
-			sendThread.Abort();
-		}catch(Exception e){
-				print (e.ToString());
-		}
 		sendstop = false;
 		if (score == 0){
-			dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
+			dist = 72.8f-(-26)-(72.8f-transform.position.z);
 			print(dist);
 			long time = (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+(count*millipusish))-starttime;
-			print(time);
+			//print(time);
 			score = dist/(time);
 			//print(score);
 		}
+		GameObject.Destroy(camera.gameObject);
 		return score;
 	}
 	
@@ -159,7 +159,7 @@ public class Bot : MonoBehaviour
 			count++;
 		}else if (other.tag == "finish"){
 			duration =  (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+count*millipusish)-starttime;
-			dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
+			dist = 72.8f-(-26)-(72.8f-transform.position.z);// Vector3.Distance(new Vector3(0,-1.7f,-26), );
 			score = dist/duration;
 			gamegoson = false;
 		}else{
@@ -264,7 +264,8 @@ public class Bot : MonoBehaviour
 						Buffer.BlockCopy(picture, first.Length, second, 0, second.Length);
 						client.Send(first,first.Length,anyIP);
 						picture = second;
-						print(picture.Length.ToString());
+						//print(picture.Length.ToString());
+						
 					}
 					client.Send(endcode,endcode.Length, anyIP);
 					newpic = false; 
