@@ -22,27 +22,59 @@ public class Manager : MonoBehaviour
 	public float maxy;
 	public float miny;
 	private List<Bot> bot;
+	private List<UnityEngine.Object> blocks = new List<UnityEngine.Object>();
 	private string result;
-	private List<UnityEngine.Object> blocks;
 	private bool ENDOFGAME = false;
 	private bool dataready = false;
 	private bool closeconnect = false;
+	private bool shuffle = false;
+	private bool start = false;
 	private Thread receiveThread; //1
 	private Thread sendThread; //1
 	private UdpClient client;
 	private UdpClient server;
+	private int botport;
     // Start is called before the first frame update
     void Start()
     {
 		Application.targetFrameRate = 5;
-        InitUDP()
-        port += 4
+        InitUDP();
+
     }
 
+	void FixedUpdate()//FixedUpdate is called at a constant interval
+    {
+		
+	}
     // Update is called once per frame
     void Update()
     {
-        
+        if (start){
+			botport = port+4;
+			
+			/*try{
+			   destroybots();
+			}catch(Exception e){
+				print (e.ToString()); 
+			}*/
+			initbot();
+			ENDOFGAME = false;
+			start = false;
+		}
+		if (shuffle){
+			if (blocks.Count >0 ){
+				destroyblocks();
+			}
+			initblock();
+			shuffle = false;
+		}
+		if (ENDOFGAME){
+			print("ENDOFGAME");
+			getresults();
+			dataready = true;
+			destroybots();
+			ENDOFGAME = false;
+		}
     }
     
     float[] createxy(){
@@ -80,7 +112,7 @@ public class Manager : MonoBehaviour
 	}
     
     void initblock(){
-		blocks = new List<UnityEngine.Object>();
+		
 		float[] randoms = getrandom(obsticalcount);
 		for (int i = 0; i < obsticalcount*2; i= i+4){
 			blocks.Add(Instantiate(obsticalblue,new Vector3(randoms[i], 3f, randoms[i+1]),new Quaternion(0, 0, 1, 0)));
@@ -89,19 +121,23 @@ public class Manager : MonoBehaviour
 	}
     
     void getresults(){
-		
 		for (int i = 0; i < bot.Count; i++){
 			if (i == 0){
-				result += bot[i].getscore().ToString("0.##");
+				result += bot[i].getscore().ToString("0.#######");
 			}else{
-				result += (";"+bot[i].getscore().ToString("0.##"));
+				result += (";"+bot[i].getscore().ToString("0.#######"));
+				
 			}
 		}
 	}
     
     void destroybots(){
 		for (int i = 0; i < bot.Count; i++){
-			while (bot[i].getnothread());
+			bool temp  = bot[i].getnothread();
+			while (!temp){
+				
+				temp  = bot[i].getnothread();
+			}
 			GameObject.Destroy(bot[i].gameObject);
 		}
 	}
@@ -119,8 +155,8 @@ public class Manager : MonoBehaviour
 		bot = new List<Bot>();
 		for (int i = 0; i < botcount; i++){
 			Bot b  = Instantiate(prefab,new Vector3(0,0,-20),new Quaternion(0, 0, 0, 0)).GetComponent<Bot>();
-			b.setportandaddress(port,"127.0.0.1");
-			port += 4;
+			b.setportandaddress(botport,"127.0.0.1");
+			botport += 4;
 			bot.Add(b);
 		}
 		
@@ -138,42 +174,46 @@ public class Manager : MonoBehaviour
     
     
     private void UDPrecv(){
-		server = new UdpClient();
-		IPEndPoint localEp = new IPEndPoint(IPAddress.Parse(adress), port+2);
-		server.Client.Bind(localEp);
+		server = new UdpClient(port+2);
+		IPEndPoint localEp = new IPEndPoint(IPAddress.Parse(adress), 0);
+		//server.Client.Bind(localEp);
 		byte[] data;
 		while (true){
 			try{
-				data = server.Receive(ref anyIP); 
+				data = server.Receive(ref localEp); 
 				string text = Encoding.UTF8.GetString(data); 
+				print(text);
 				if (text == "CLOSECONNECT"){
 					closeconnect = true;
 					break;
 				}
-				if (text == "Shuffle"){
+				if (text == "SHUFFLE"){
+					shuffle = true;
 					ENDOFGAME = true;
-					initblock();
+					continue;
+					
 				}
 				if (text == "START"){
-					destroybots();
-					initbot();
-					ENDOFGAME = false;
+					start = true;
+					continue;
 				}
-				string[] text = text.Split(";");
-				if (text[0]=="BOTCOUNT"){
-					botcount = int.Parse(text[1]);
-				}
-				if (text[0] == "EOG"){
-					getresults()
-					ENDOFGAME = true;
+				if (text == "GETRESULT"){
+					print("sendingagain");
 					dataready = true;
-					destroybots();
+					continue;
+				}
+				string[] texts = text.Split(";");
+				if (texts[0]=="BOTCOUNT"){
+					botcount = int.Parse(texts[1]);
+					continue;
+				}
+				if (texts[0] == "EOG"){
+					ENDOFGAME = true;
+					continue;
 					
 				}
 				
-				string[] text = text.Split(";");
-				acc = Convert.ToDouble(text[0])
-				steer = Convert.ToDouble(text[1])
+			
 			} 
 			catch(Exception e){
 				print (e.ToString());
@@ -184,8 +224,8 @@ public class Manager : MonoBehaviour
 	
 	private void UDPstuff(){
 		client = new UdpClient(port);
-		IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress),port+1);
-		byte[] startresult = System.Text.Encoding.UTF8.GetBytes("RESULTSTART")
+		IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress),port+3);
+		byte[] startresult = System.Text.Encoding.UTF8.GetBytes("RESULTSTART");
 		byte[] endresult = System.Text.Encoding.UTF8.GetBytes("RESULTEND");
 		while (true){
 			try{
@@ -193,13 +233,16 @@ public class Manager : MonoBehaviour
 					break;
 				}
 				if (dataready){
-					client.Send(startresult,startresult.Length, anyIP);
-					resultbyte = System.Text.Encoding.UTF8.GetBytes(result)
-					while (true){
+					print(result);
+					
+					byte[] resultbyte = System.Text.Encoding.UTF8.GetBytes(result);
+					client.Send(resultbyte,resultbyte.Length, anyIP);
+					dataready = false;
+					/*while (true){
 						if (resultbyte.Length < 8654){
-							client.Send(resultbyte,picture.Length, anyIP);
+							client.Send(resultbyte,resultbyte.Length, anyIP);
 							print("sending the rest!");
-							
+							dataready = false;
 							break;
 						}
 						byte[] first = new byte[8654];
@@ -209,7 +252,7 @@ public class Manager : MonoBehaviour
 						client.Send(first,first.Length,anyIP);
 						resultbyte = second;
 					}
-					client.Send(endresult,endresult.Length, anyIP);
+					client.Send(endresult,endresult.Length, anyIP);*/
 				}
 				
 				

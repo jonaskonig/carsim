@@ -12,32 +12,47 @@ public class Bot : MonoBehaviour
 	public GameObject prefab;
 	public float speed;//Speed Multiplier
     public float rotation;//Rotation multiplier
-	public float steerangle;
-	public float acceleration;
+	public int millipusish = 1000;
 	public int resWidth;
 	public int resHeight;
+	
+    [SerializeField] private float motorForce;
+    [SerializeField] private float maxSteerAngle;
+    
+    [SerializeField] private Transform frontLeftWheelTransform;
+    [SerializeField] private Transform frontRightWheeTransform;
+    [SerializeField] private Transform rearLeftWheelTransform;
+    [SerializeField] private Transform rearRightWheelTransform;
+    
+    [SerializeField] private WheelCollider frontLeftWheelCollider;
+    [SerializeField] private WheelCollider frontRightWheelCollider;
+    [SerializeField] private WheelCollider rearLeftWheelCollider;
+    [SerializeField] private WheelCollider rearRightWheelCollider;
 	//public Camera camera;
 	private long starttime;
-	private double acc;
-	private double steer;
+	private float acc = 0;
+	private float steer = 0;
 	private string adress;
-	private double score;
+	private double score = 0;
 	private int port;
 	private bool newpic;
 	private byte[] picture;
 	private long duration;
+	private float dist;
+	private float currentSteerAngle;
 	private Thread receiveThread; //1
-	private Thread sendThread:
+	private Thread sendThread;
 	private UdpClient client; //2
 	private UdpClient server; 
 	private bool gamegoson;
-	private bool recvstop;
-	private bool sendstop;
+	private bool recvstop = true;
+	private bool sendstop = true;
 	public Camera camera;
     void FixedUpdate()//FixedUpdate is called at a constant interval
     {
-		transform.Rotate(0, steerangle * rotation, 0, Space.World);//controls the cars movement
-        transform.position += this.transform.right * acceleration * speed;//controls the cars turning
+		HandleMotor();
+        HandleSteering();
+        UpdateWheels();
 	}
     
     // Start is called before the first frame update
@@ -47,13 +62,16 @@ public class Bot : MonoBehaviour
 		setupcam();
         starttime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
         InitUDP();
+        
     }
 
     // Update is called once per frame
     void Update()
     {
-		picture = CamCapture();
-		newpic = true;
+		if (gamegoson){
+			picture = CamCapture();
+			newpic = true;
+		}
         
     }
     public void setportandaddress(int aport, string aadress){
@@ -62,21 +80,71 @@ public class Bot : MonoBehaviour
 	}
 	
 	private void setupcam(){
-		GameObject temp  = Instantiate(prefab,transform.position,new Quaternion(0, 0, 0, 0));
+		GameObject temp  = Instantiate(prefab,transform.position+ new Vector3(0,5,0),new Quaternion(0, 0, 0, 0));
 		CameraFollow script = temp.GetComponent<CameraFollow>();
 		script.settransform(transform);
 		camera = temp.GetComponent<Camera>();
 	}
+	private void HandleMotor()
+    {
+        frontLeftWheelCollider.motorTorque = acc * motorForce;
+        frontRightWheelCollider.motorTorque = acc * motorForce;    
+    }
+	
+	private void HandleSteering()
+    {
+        currentSteerAngle = maxSteerAngle * steer;
+        frontLeftWheelCollider.steerAngle = currentSteerAngle;
+        frontRightWheelCollider.steerAngle = currentSteerAngle;
+    }
+	
+	  private void UpdateWheels()
+    {
+        UpdateSingleWheel(frontLeftWheelCollider, frontLeftWheelTransform);
+        UpdateSingleWheel(frontRightWheelCollider, frontRightWheeTransform);
+        UpdateSingleWheel(rearRightWheelCollider, rearRightWheelTransform);
+        UpdateSingleWheel(rearLeftWheelCollider, rearLeftWheelTransform);
+    }
+
+    private void UpdateSingleWheel(WheelCollider wheelCollider, Transform wheelTransform)
+    {
+        Vector3 pos;
+        Quaternion rot
+;       wheelCollider.GetWorldPose(out pos, out rot);
+        wheelTransform.rotation = rot;
+        wheelTransform.position = pos;
+    }
+    
+    
 	
 	public double getscore(){
 		gamegoson = false;
-		float dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
-		score = dist/(starttime- new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds());
+		GameObject.Destroy(camera.gameObject);
+		//Destroy(camera);
+		server.Close();
+		client.Close();
+		receiveThread.Abort();
+		recvstop = false;
+		try{
+			sendThread.Abort();
+		}catch(Exception e){
+				print (e.ToString());
+		}
+		sendstop = false;
+		if (score == 0){
+			dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
+			print(dist);
+			long time = (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+(count*millipusish))-starttime;
+			print(time);
+			score = dist/(time);
+			//print(score);
+		}
 		return score;
 	}
 	
 	public bool getnothread(){
-		return (!recvstop && !sendstop)
+		
+		return (!recvstop && !sendstop);
 	}
     
     public long Getduration(){
@@ -90,10 +158,12 @@ public class Bot : MonoBehaviour
 		}else if(other.tag == "blue" && isleft(other.transform.position)){
 			count++;
 		}else if (other.tag == "finish"){
-			duration =  (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds())-starttime;
+			duration =  (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+count*millipusish)-starttime;
+			dist = Vector3.Distance(new Vector3(0,0,-20), transform.position);
+			score = dist/duration;
 			gamegoson = false;
 		}else{
-			Debug.Log("Tag Problem:"+other.tag);
+			//Debug.Log("Tag Problem:"+other.tag);
 		}	    
     }
     
@@ -125,29 +195,30 @@ public class Bot : MonoBehaviour
 		receiveThread.Start();
 		sendThread = new Thread (new ThreadStart(UDPstuff));
 		sendThread.IsBackground = true;
-		sThread.Start();
+		sendThread.Start();
 	}
 	
 	private void UPDrecv(){
-		server = new UdpClient();
-		IPEndPoint localEp = new IPEndPoint(IPAddress.Parse(adress), port+2);
-		server.Client.Bind(localEp);
+		server = new UdpClient(port+2);
+		IPEndPoint localEp = new IPEndPoint(IPAddress.Parse(adress), 0);
+		//server.Client.Bind(localEp);
 		byte[] data;
 		while (true){
 			try{
 				if(!gamegoson){
 					recvstop = false;
+					server.Close();
 					break;
 				}
-				data = server.Receive(ref anyIP); 
+				data = server.Receive(ref localEp);
 				string text = Encoding.UTF8.GetString(data); 
 				if (text == "ENDREG"){
 					recvstop = false;
 					break;
 				}
-
-				acc = Convert.ToDouble(text[0])
-				steer = Convert.ToDouble(text[1])
+				string[] texts = text.Split(";");
+				acc = float.Parse(texts[0]);
+				steer = float.Parse(texts[1]);
 			} 
 			catch(Exception e){
 				print (e.ToString());
@@ -164,20 +235,26 @@ public class Bot : MonoBehaviour
 		client = new UdpClient(port);
 		byte[] startcode = System.Text.Encoding.UTF8.GetBytes("LosGehtsKleinerHase");
 		byte[] endcode = System.Text.Encoding.UTF8.GetBytes("ZuEndekleinerHase");
+		byte[] eog = System.Text.Encoding.UTF8.GetBytes("ENDOFGAME");
 		print("Port:"+ port.ToString());
-		int port2 = port+1;
-		
+		int port2 = port+3;
 		IPEndPoint anyIP = new IPEndPoint(IPAddress.Parse(adress),port2);
 		while (true){
 			try{
+				if (!gamegoson){
+					client.Send(eog, eog.Length,anyIP );
+					client.Close();
+					sendstop = false;
+					break;
+				}
 				if (newpic){
 					int len = picture.Length;
-					print (len.ToString());
+					//print (len.ToString());
 					client.Send(startcode,startcode.Length, anyIP);
 					while (true){
 						if (picture.Length < 8654){
 							client.Send(picture,picture.Length, anyIP);
-							print("sending the rest!");
+							//print("sending the rest!");
 							
 							break;
 						}
@@ -192,13 +269,6 @@ public class Bot : MonoBehaviour
 					client.Send(endcode,endcode.Length, anyIP);
 					newpic = false; 
 				}
-				if (!gamegoson){
-					var bytes = System.Text.Encoding.UTF8.GetBytes("ENDOFGAME");
-					client.Send(bytes, bytes.Length);
-					sendstop = false;
-					break;
-				}
-				
 			} 
 			catch(Exception e){
 				print (e.ToString()); 
