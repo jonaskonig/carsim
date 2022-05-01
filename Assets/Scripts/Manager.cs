@@ -4,19 +4,32 @@ using System;
 using UnityEngine;
 using System.Threading;
 using System.Net;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using Json.Net;
+
+public class Blocklist
+{
+    public int thisid;
+    public float[] randoms;
+    
+}
+     
 
 public class Manager : MonoBehaviour
 {
 	public GameObject prefab;//holds bot prefab			y 238 -130 x -29 23
 	public GameObject obsticalblue;
 	public GameObject obsticalred;
+	public bool loadobsticals = true;
 	public int obsticalcount;
 	public int botcount;
 	public int port;
+	public int thisid;
 	public string adress;
 	private int startport;
+	public string savforblockconfig = "/Users/jona/Documents/studium/bachelor/BachelorNN/evoloution/";
 	public float maxx;
 	public float minx;
 	public float maxy;
@@ -110,10 +123,38 @@ public class Manager : MonoBehaviour
 		return random;
 		
 	}
+	
+	float[] getblocksfromfile(){
+		string fullPath = savforblockconfig+thisid.ToString()+".json";
+		if (File.Exists(fullPath)){
+			string content = File.ReadAllText(fullPath);
+			print(content);
+			Blocklist blocklist = JsonUtility.FromJson<Blocklist>(content);
+			return blocklist.randoms;
+		}else{
+			float[] randoms = getrandom(obsticalcount);
+			Blocklist blocklist = new Blocklist{thisid = thisid, randoms = randoms};
+			string json =  JsonNet.Serialize(blocklist);
+			File.WriteAllText(fullPath,json); 
+			return randoms;
+		}
+		
+		
+
+	}
     
     void initblock(){
-		
-		float[] randoms = getrandom(obsticalcount);
+		float[] randoms;
+		if (loadobsticals){
+			randoms = getblocksfromfile();
+		}else{
+			randoms = getrandom(obsticalcount);
+			Blocklist blocklist = new Blocklist{thisid = thisid, randoms = randoms};
+			string fullPath = savforblockconfig+thisid.ToString()+".json";
+			string json =  JsonNet.Serialize(blocklist);
+			File.WriteAllText(fullPath,json); 
+		}
+		thisid ++;
 		for (int i = 0; i < obsticalcount*2; i= i+4){
 			blocks.Add(Instantiate(obsticalblue,new Vector3(randoms[i], 3f, randoms[i+1]),new Quaternion(0, 0, 1, 0)));
 			blocks.Add(Instantiate(obsticalred,new Vector3(randoms[i+2], 3f, randoms[i+3]),new Quaternion(0, 0, 1, 0)));
@@ -123,6 +164,7 @@ public class Manager : MonoBehaviour
     void getresults(){
 		result = "";
 		for (int i = 0; i < bot.Count; i++){
+			print(i);
 			if (i == 0){
 				result += bot[i].getscore().ToString("0.#######");
 			}else{

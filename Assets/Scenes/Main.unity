@@ -618,6 +618,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8178473456922943028, guid: 017a5bb2317bb4c4ea0028cac5a53386,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 8d3514e3565384570ace5a1a5e35f78f, type: 2}
     - target: {fileID: -7933163267120903005, guid: 017a5bb2317bb4c4ea0028cac5a53386,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -628,6 +633,11 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: e1a20c54e99a04d20ba6ab38c3f47a59, type: 2}
+    - target: {fileID: -6316472972080950730, guid: 017a5bb2317bb4c4ea0028cac5a53386,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 8d3514e3565384570ace5a1a5e35f78f, type: 2}
     - target: {fileID: -4947092273651494511, guid: 017a5bb2317bb4c4ea0028cac5a53386,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -703,6 +713,11 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 8d3514e3565384570ace5a1a5e35f78f, type: 2}
+    - target: {fileID: 2177547403663269520, guid: 017a5bb2317bb4c4ea0028cac5a53386,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 8d3514e3565384570ace5a1a5e35f78f, type: 2}
     - target: {fileID: 3105463541182749304, guid: 017a5bb2317bb4c4ea0028cac5a53386,
         type: 3}
       propertyPath: m_LocalScale.x
@@ -744,6 +759,11 @@ PrefabInstance:
       value: -90
       objectReference: {fileID: 0}
     - target: {fileID: 3737370060238859152, guid: 017a5bb2317bb4c4ea0028cac5a53386,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: e1a20c54e99a04d20ba6ab38c3f47a59, type: 2}
+    - target: {fileID: 3891483551042952937, guid: 017a5bb2317bb4c4ea0028cac5a53386,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
@@ -884,10 +904,13 @@ MonoBehaviour:
     type: 3}
   obsticalred: {fileID: 4860177610794674011, guid: 3e11cd3ae44c8436d85c818e43d4b542,
     type: 3}
+  loadobsticals: 1
   obsticalcount: 10
   botcount: 2
   port: 9653
+  thisid: 0
   adress: 127.0.0.1
+  savforblockconfig: /Users/jona/Documents/studium/bachelor/BachelorNN/evoloution/
   maxx: 23
   minx: -23
   maxy: 78
