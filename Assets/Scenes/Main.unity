@@ -908,7 +908,7 @@ MonoBehaviour:
   obsticalcount: 10
   botcount: 2
   port: 9653
-  thisid: 0
+  thisid: 1
   adress: 127.0.0.1
   savforblockconfig: /Users/jona/Documents/studium/bachelor/BachelorNN/evoloution/
   maxx: 23

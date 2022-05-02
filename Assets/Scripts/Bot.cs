@@ -141,7 +141,11 @@ public class Bot : MonoBehaviour
 			score = dist/(time);
 			//print(score);
 		}
-		GameObject.Destroy(camera.gameObject);
+		try{
+			GameObject.Destroy(camera.gameObject);
+		}catch(Exception e){
+			print (e.ToString());
+		}
 		camera = null;
 		return score;
 	}
