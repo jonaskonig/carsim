@@ -23,6 +23,7 @@ public class Manager : MonoBehaviour
 	public GameObject obsticalblue;
 	public GameObject obsticalred;
 	public bool loadobsticals = true;
+	public bool humanpilot = false;
 	public int obsticalcount;
 	public int botcount;
 	public int port;
@@ -50,8 +51,15 @@ public class Manager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-		Application.targetFrameRate = 5;
-        InitUDP();
+		if (humanpilot){
+			botcount = 1;
+			initblock();
+			initbot();
+			
+		}else{
+			Application.targetFrameRate = 5;
+			InitUDP();
+		}
 
     }
 
@@ -198,6 +206,9 @@ public class Manager : MonoBehaviour
 		bot = new List<Bot>();
 		for (int i = 0; i < botcount; i++){
 			Bot b  = Instantiate(prefab,new Vector3(0,-1.7f,-26),new Quaternion(0, 0, 0, 0)).GetComponent<Bot>();
+			if (humanpilot){
+				b.sethumandriver(true);
+			}
 			b.setportandaddress(botport,"127.0.0.1");
 			botport += 4;
 			bot.Add(b);

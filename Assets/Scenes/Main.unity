@@ -905,10 +905,11 @@ MonoBehaviour:
   obsticalred: {fileID: 4860177610794674011, guid: 3e11cd3ae44c8436d85c818e43d4b542,
     type: 3}
   loadobsticals: 1
+  humanpilot: 1
   obsticalcount: 10
   botcount: 2
   port: 9653
-  thisid: 1
+  thisid: 252
   adress: 127.0.0.1
   savforblockconfig: /Users/jona/Documents/studium/bachelor/BachelorNN/evoloution/
   maxx: 23
@@ -972,7 +973,7 @@ MeshCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1798665018}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 4
   m_Convex: 1

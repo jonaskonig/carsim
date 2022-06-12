@@ -15,6 +15,8 @@ public class Bot : MonoBehaviour
 	public int millipusish = 1000;
 	public int resWidth;
 	public int resHeight;
+	private const string HORIZONTAL = "Horizontal";
+    private const string VERTICAL = "Vertical";
 	
     [SerializeField] private float motorForce;
     [SerializeField] private float maxSteerAngle;
@@ -30,12 +32,14 @@ public class Bot : MonoBehaviour
     [SerializeField] private WheelCollider rearRightWheelCollider;
 	//public Camera camera;
 	private long starttime;
+	private bool humanpilot = false;
 	private float acc = 0;
 	private float steer = 0;
 	private string adress;
 	private double score = 0;
 	private int port;
 	private bool newpic;
+	private bool humanstart = false;
 	private byte[] picture;
 	private long duration;
 	private float dist;
@@ -50,9 +54,31 @@ public class Bot : MonoBehaviour
 	public Camera camera;
     void FixedUpdate()//FixedUpdate is called at a constant interval
     {
+		if (!humanstart){
+			if(Input.GetKey(KeyCode.Space)){
+				humanstart = true;
+				starttime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
+				print("start");
+			}
+		}else{
+			if(new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()-starttime>= 40000){
+				dist = 72.8f-(-26)-(72.8f-transform.position.z);
+				print(dist);
+				long time = (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+(count*millipusish))-starttime;
+				score = dist/(time);
+				print(score);
+			}
+		}
+		
+		
+		if (humanpilot){
+			GetInput();
+		}
+		
 		HandleMotor();
         HandleSteering();
         UpdateWheels();
+       
 	}
     
     // Start is called before the first frame update
@@ -60,15 +86,16 @@ public class Bot : MonoBehaviour
     {
 		gamegoson = true;
 		setupcam();
-        starttime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
-        InitUDP();
-        
+		if (!humanpilot){
+			starttime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
+			InitUDP();
+		}
     }
 
     // Update is called once per frame
     void Update()
     {
-		if (gamegoson && camera != null){
+		if (gamegoson && camera != null && !humanpilot){
 			picture = CamCapture();
 			if (picture.Length>0){
 				newpic = true;
@@ -77,6 +104,18 @@ public class Bot : MonoBehaviour
 		}
         
     }
+    
+    private void GetInput()
+    {
+		steer = Input.GetAxis(HORIZONTAL);
+        acc  = Input.GetAxis(VERTICAL);
+    }
+
+    
+    public void sethumandriver(bool human){
+		humanpilot = human;
+	}
+    
     public void setportandaddress(int aport, string aadress){
 		port = aport;
 		adress = aadress;
@@ -134,6 +173,7 @@ public class Bot : MonoBehaviour
 		recvstop = false;
 		sendstop = false;
 		if (score == 0){
+			print("calcu");
 			dist = 72.8f-(-26)-(72.8f-transform.position.z);
 			print(dist);
 			long time = (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+(count*millipusish))-starttime;
@@ -169,6 +209,7 @@ public class Bot : MonoBehaviour
 			duration =  (new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()+count*millipusish)-starttime;
 			dist = 72.8f-(-26)-(72.8f-transform.position.z);// Vector3.Distance(new Vector3(0,-1.7f,-26), );
 			score = dist/duration;
+			print(score);
 			gamegoson = false;
 		}else{
 			//Debug.Log("Tag Problem:"+other.tag);
